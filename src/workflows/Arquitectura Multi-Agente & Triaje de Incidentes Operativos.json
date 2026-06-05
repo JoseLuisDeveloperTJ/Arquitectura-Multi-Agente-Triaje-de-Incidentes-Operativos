@@ -1,0 +1,746 @@
+{
+  "name": "Arquitectura Multi-Agente & Triaje de Incidentes Operativos",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "463020e2-ff28-4d1c-a999-88e1bbdd5341",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bf195af5-a002-4cc5-b437-512c98cca8ef",
+      "name": "Webhook",
+      "webhookId": "463020e2-ff28-4d1c-a999-88e1bbdd5341"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const inputData = item.json;\n\nconst rawMessage = inputData.message_text || inputData.text || \"\";\nconst userId = inputData.user_id || \"unknown_user\";\nconst channel = inputData.channel || \"omnichannel\";\n\n\nconst cleanMessage = rawMessage.replace(/[\\r\\n]+/g, ' ').replace(/\\s+/g, ' ').trim();\n\n\nreturn {\n  json: {\n    userId: userId,\n    channel: channel,\n    originalMessage: rawMessage,\n    cleanMessage: cleanMessage\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        0
+      ],
+      "id": "fd7a6401-99cf-4e62-b116-79eb0c3fb3b9",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        288
+      ],
+      "id": "b648311a-86b4-44db-9be3-a48030c231a3",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"categoria\": \"Check-in / acceso\",\n  \"prioridad\": \"Alta\",\n  \"confidence\": 95\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        672,
+        288
+      ],
+      "id": "763013b3-85f4-49f3-b556-16dc2c35ef27",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "Alta",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "29ace6ad-c94b-4d59-a9d5-5b5433b35253"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "02770700-9c6b-4bbf-a641-7c0a4e4334d4",
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "Media",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ea989143-97d6-4e90-819f-1111ca63b061",
+                    "leftValue": "={{ $json.priority }}",
+                    "rightValue": "Baja",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        912,
+        -16
+      ],
+      "id": "6080f348-da62-4a09-a5c9-3c9432942f68",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1664,
+        208
+      ],
+      "id": "100968f3-a85e-429a-bde7-21b178a94361",
+      "name": "OpenAI Chat Model1"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Use this tool to fetch specific house rules, Wi-Fi credentials, property check-out times, amenities troubleshooting, or payment policies needed to resolve the customer's issue.",
+        "memoryKey": {
+          "__rl": true,
+          "value": "knowledge_base",
+          "mode": "id"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        1808,
+        288
+      ],
+      "id": "92c3c221-0cf9-4c74-9cea-fee613b165e9",
+      "name": "Simple Vector Store"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2384,
+        192
+      ],
+      "id": "7b8e70e3-ba92-42d5-9b10-7ce53bb9a048",
+      "name": "OpenAI Chat Model2"
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=<system_prompt>\nYou are the Lead Triaje & Operations Agent for XYZ. Your sole objective is to analyze inbound omnichannel customer messages, classify them into exactly ONE of the 8 official business categories, and assign an operational priority level.\n\nYou must output your analysis in a strict, valid JSON format. Do not include any conversational text, markdown formatting blocks (like ```json), or explanations outside the JSON structure.\n\n<business_rules>\n- HIGH PRIORITY (Alta): Real-time crisis affecting guest experience or immediate property reputation/habitability. Freeze auto-responses; immediate human escalation required.\n- MEDIUM PRIORITY (Media): Operational or financial issues that require a physical fix, validation against systems (PMS/ERP), or strict compliance. Requires human verification before responding.\n- LOW PRIORITY (Baja): Routine informational inquiries that can be fully handled via static knowledge bases (RAG).\n</business_rules>\n\n<official_categories>\n1. Check-in / acceso (High Priority)\n2. Mantenimiento (Medium Priority)\n3. Limpieza (High Priority)\n4. Ruido / queja (High Priority)\n5. Pregunta general (Low Priority)\n6. Extensión de estancia / disponibilidad (Medium Priority)\n7. Seguimiento a propietario (Medium Priority)\n8. Administración / pagos (Medium Priority)\n</official_categories>\n\n<output_format>\n{\n  \"category\": \"Exact Category Name from official_categories\",\n  \"priority\": \"Alta\" | \"Media\" | \"Baja\",\n  \"confidence_score\": 0-100,\n  \"justification\": \"Brief technical reason for the classification and priority routing\"\n}\n</output_format>\n</system_prompt>\n\n<few_shot_examples>\n<example 1>\n<input>\n\"Hola, llegamos al departamento y el código de acceso no funciona. Estamos afuera con maletas.\"\n</input>\n<output>\n{\n  \"category\": \"Check-in / acceso\",\n  \"priority\": \"Alta\",\n  \"confidence_score\": 100,\n  \"justification\": \"User is physically locked out of the property with luggage. Immediate crisis requiring live human intervention.\"\n}\n</output>\n</example 1>\n\n<example 2>\n<input>\n\"El aire acondicionado no enfría y hace mucho calor. ¿Nos pueden ayudar hoy?\"\n</input>\n<output>\n{\n  \"category\": \"Mantenimiento\",\n  \"priority\": \"Media\",\n  \"confidence_score\": 98,\n  \"justification\": \"Property maintenance issue. Guest is inside but comfort is compromised. Requires ticketing and dispatch coordination.\"\n}\n</output>\n</example 2>\n\n<example 3>\n<input>\n\"Necesito saber si ya se pagó el mantenimiento mensual de la propiedad.\"\n</input>\n<output>\n{\n  \"category\": \"Administración / pagos\",\n  \"priority\": \"Media\",\n  \"confidence_score\": 95,\n  \"justification\": \"Financial query regarding cash flow. Must be routed to Medium Priority to enforce strict human financial validation before confirming any data.\"\n}\n</output>\n</example 3>\n\n<example 4>\n<input>\n\"¿A qué hora es el check-out mañana?\"\n</input>\n<output>\n{\n  \"category\": \"Pregunta general\",\n  \"priority\": \"Baja\",\n  \"confidence_score\": 100,\n  \"justification\": \"Static logistical question. Safe for fully autonomous RAG response without human intervention.\"\n}\n</output>\n</example 4>\n</few_shot_examples>\n\n<inbound_message>\n{{ $json.cleanMessage }}\n</inbound_message>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        480,
+        0
+      ],
+      "id": "1a3c012b-c02c-4fe3-a19f-560d80919cb3",
+      "name": "IA Agente: Clasificador"
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1792,
+        0
+      ],
+      "id": "9acf2cba-74e4-40ab-8a01-1d88cff5e59f",
+      "name": "IA Agent: Redactor"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=<system_prompt>\nYou are the Senior QA Operations Supervisor for XYZ. Your sole objective is to audit the proposed response draft against the user's original inbound message to ensure compliance, absolute factuality, and professional alignment.\n\n<audit_rules>\n1. LANGUAGE CONSTRAINT: The final output MUST be written entirely in Spanish. If the proposed draft or the input context is in English, translate and adapt it seamlessly to professional Spanish.\n2. HALLUCINATION CHECK: Compare the proposed draft with the factual data inside the message context. If the draft contains invented rules, prices, check-out times, or false promises, immediately remove or fix them.\n3. TONAL ALIGNMENT: Ensure the response is highly professional, empathetic, and appropriate for non-technical stakeholders or guests.\n4. OUTPUT SECURITY: Your final response will be sent directly to the operational team. Do not include internal commentary, meta-explanations, or markdown blocks (like ```json). Just output the clean, final validated text.\n</audit_rules>\n\n<input_context>\n<original_user_message>\n{{ $node[\"Code Node\"].json[\"cleanMessage\"] }}\n</original_user_message>\n\n<proposed_draft>\n{{ $json.output }} \n</proposed_draft>\n</input_context>\n\nExecute your audit. If the draft is correct, translate it to Spanish (if it isn't already) and output it verbatim. If it contains hallucinations or tone errors, rewrite it cleanly in Spanish.\n</system_prompt>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2464,
+        0
+      ],
+      "id": "ece4326a-525b-4139-b643-0abd76060eaa",
+      "name": "IA Agent: QA Supervisor"
+    },
+    {
+      "parameters": {
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1776,
+        -368
+      ],
+      "id": "e20e1a22-66f2-4e03-a36d-893bc276871d",
+      "name": "Slack: Enviar alerta",
+      "webhookId": "cdb92d7b-6c0c-4b8a-9ba6-0bd3ea12deff",
+      "credentials": {
+        "slackApi": {
+          "id": "s5ShiXXfeXys3okB",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        0
+      ],
+      "id": "4ec4fcf9-cedd-4ef7-9024-c3a7835e1694",
+      "name": "ClickUp: Crea una Tarea"
+    },
+    {
+      "parameters": {
+        "resource": "base",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1472,
+        656
+      ],
+      "id": "9f59f05d-d28e-4383-b1c9-e2d2c7ced4e6",
+      "name": "Get many bases"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1584,
+        880
+      ],
+      "id": "4e5ac75f-d9d8-4849-9dc2-7dc846c5ce1a",
+      "name": "OpenAI Chat Model3"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1744,
+        880
+      ],
+      "id": "ebaaae12-5a3d-45f3-aae1-9a84b6c90a22",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=<system_prompt>\nYou are the Senior QA Operations Auditor for XYZ. Your sole objective is to review the response draft generated by the writer agent and ensure it perfectly aligns with the factual information available and compliance standards.\n\n<audit_rules>\n- FACTUAL INTEGRITY: Cross-reference the proposed draft with the factual data inside <context_data>. If the draft contains any information, numbers, or rules NOT explicitly mentioned in the context data, rewrite the draft to remove or correct the hallucination.\n- LANGUAGE & TONE: The final output MUST be in professional, empathetic Spanish.\n- OUTPUT FORMAT: You are generating a clean text block that will be embedded directly into an operational ClickUp ticket for a human operator. Do NOT include any meta-commentary, introductory text (like \"Here is the audited response:\"), or markdown code blocks (```). Output ONLY the final, clean, validated response text.\n</audit_rules>\n</system_prompt>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2048,
+        656
+      ],
+      "id": "513de854-a307-4aca-a286-91884a1836cd",
+      "name": "IA Agent: QA Supervisor V2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2048,
+        880
+      ],
+      "id": "e22b6fad-17e2-4903-94f4-4f796338d178",
+      "name": "OpenAI Chat Model4"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2400,
+        656
+      ],
+      "id": "9efc818f-63a0-485e-950d-e16f9a58c189",
+      "name": "WhatsApp: Enviar mensaje",
+      "webhookId": "65898c2e-3988-404f-927f-51244f76d4b8"
+    },
+    {
+      "parameters": {
+        "content": "\n## Urgencia Alta\n",
+        "height": 80,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        -544
+      ],
+      "id": "67da2351-baf8-4638-b9be-53eec015d1a9",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "\n## Urgencia Media\n\n",
+        "height": 80
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        -128
+      ],
+      "id": "520823f8-b783-4c18-8ef4-5fd32e4e8db6",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "\n## Urgencia Baja\n\n",
+        "height": 80,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        544
+      ],
+      "id": "84670895-7df9-4aa9-bd60-20636189e7ab",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        0
+      ],
+      "id": "1c227be4-2479-43ef-8841-e5ea74111aa6",
+      "name": "ClickUp: Crea una Tarea para Colaborador"
+    },
+    {
+      "parameters": {
+        "content": "## 🎯GOBERNANZA: PROTOCOLO HUMAN-IN-THE-LOOP (HITL)\n\nEste nodo actúa como el puente de control de calidad entre la IA y la operación real, deteniendo el despacho autónomo para mitigar riesgos operativos.\n\nAcción del Nodo: Inyecta de forma automática el borrador final (auditado y traducido al español por el Agente QA) directamente en la descripción del ticket interno de ClickUp.\n\nCriterio Humano (HITL): El colaborador recibe la notificación en su espacio de trabajo y evalúa la propuesta basándose en el contexto del CRM.\n\nRamificación de Decisiones Operativas:\n\nAprobación Directa: Si la respuesta de la IA es óptima, el operador copia el texto y lo despacha manualmente al cliente.\n\nEdición / Corrección: Si el caso requiere matices específicos, el operador edita el texto directamente antes de enviarlo.",
+        "height": 464,
+        "width": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3056,
+        0
+      ],
+      "id": "e0038af4-160b-4074-a36d-d58ac69422cd",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## 🌐 ARQUITECTURA GENERAL DEL FLUJO:  Multi-Agente & Triaje de Incidentes Operativos\n\nEste workflow automatiza la clasificación, análisis y resolución de mensajes entrantes de clientes/huéspedes utilizando una estrategia híbrida de Inteligencia Artificial (LLM) y Gobernanza Humana.\n\n1. Entrada y Clasificación: El sistema recibe el mensaje, limpia los datos y evalúa el nivel de urgencia mediante un nodo de decisión (Switch).\n\n2. Procesamiento Inteligente (Ruta Media):\n\nAgente Redactor: Formula una propuesta de solución en español utilizando una arquitectura RAG simplificada (recuperación relacional desde base de datos).\n\nAgente QA Supervisor: Audita el borrador para garantizar la precisión factual, eliminar alucinaciones y forzar el tono corporativo.\n\n3. Control de Calidad (HITL): Detiene la ejecución autónoma y envía el borrador a ClickUp, permitiendo que un operador valide o edite la respuesta.\n\n4. Despacho Autónomo (Ruta Baja): Resuelve consultas estáticas recurrentes de forma directa e inmediata para optimizar tiempos de respuesta.\n\n📌 DOCUMENTACIÓN Y MAPA DE PROCESOS\n\nPara entender el diseño lógico, las ramificaciones de urgencia y la distribución de responsabilidades de cada agente de IA, consulta el diagrama arquitectónico original en el siguiente enlace:\n\n🔗 https://miro.com/app/board/uXjVKar0jtI=/",
+        "height": 640,
+        "width": 864,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -736
+      ],
+      "id": "8f2f6abe-cd3d-4ecb-b684-f2fa385c5d94",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        -368
+      ],
+      "id": "330199d3-30d2-4c13-bc3d-30c59b286a83",
+      "name": "ClickUp: Crea una Tarea1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=XML\n<input_context>\n<inbound_customer_message>\n{{ $json.cleanMessage }}\n</inbound_customer_message>\n\n<context_data>\n{{ $json.columna_de_la_respuesta_en_airtable }}\n</context_data>\n</input_context>\n\nBased on the context data above, please draft the final response for the customer in Spanish.",
+        "options": {
+          "systemMessage": "<system_prompt>\nYou are the Expert Guest Relations Specialist for XYZ. Your sole objective is to draft an empathetic, polite, and professional response in Spanish to resolve the customer's issue using ONLY verified data.\n\n<operating_rules>\n- LANGUAGE: You MUST write the final response entirely in Spanish.\n- TONAL GUIDELINES: Maintain a reassuring, corporate, warm, and helpful tone. Always apologize sincerely if the guest is experiencing a problem or discomfort.\n- STRICT FACTUALITY: You are ONLY allowed to use the facts provided in the <context_data> section. If the context data does not contain the specific answer or is empty, you MUST explicitly state that the on-site team is verifying the details manually. Never invent Wi-Fi credentials, prices, names, or schedules.\n- OUTPUT SECURITY: Your final response will be sent to the team/guest. Do not include any introductory phrases (e.g., \"Aquí está la respuesta:\"), internal annotations, or markdown blocks (```). Output ONLY the final clean text.\n</operating_rules>\n\n<thinking_process>\nBefore generating the final response, you must internally perform the following steps:\n1. Analyze the <inbound_customer_message> to identify the core issue and the emotional state of the guest.\n2. Review the <context_data> to find the exact, factual solution to the issue.\n3. Check for gaps: Determine if the context data actually resolves the problem or if manual intervention is needed.\n4. Draft the response mentally applying the tonal guidelines, ensuring zero hallucinations.\n</thinking_process>\n\n<few_shot_examples>\n<example_1>\n<description>Context data has the exact answer (Wi-Fi issue)</description>\n<input_context>\n<inbound_customer_message>Hola, no puedo conectarme al internet de la casa, ¿me pasan la clave?</inbound_customer_message>\n<context_data>Property: Villa-01. Wi-Fi Network: XYZ_HighSpeed. Password: GuestWifi2026! Check-out: 11:00 AM.</context_data>\n</input_context>\n<ideal_output>Hola. Le ofrecemos una disculpa por el inconveniente para conectarse a la red. Con mucho gusto le comparto las credenciales de acceso para su propiedad: la red es \"XYZ_HighSpeed\" y la contraseña es \"GuestWifi2026!\". Quedamos a su entera disposición si requiere asistencia adicional durante su estancia.</ideal_output>\n</example_1>\n\n<example_2>\n<description>Context data DOES NOT have the answer (Mantenimiento complejo)</description>\n<input_context>\n<inbound_customer_message>El aire acondicionado de la recámara principal empezó a tirar agua y no enfría nada.</inbound_customer_message>\n<context_data></context_data> <!-- Empty or unrelated data -->\n</input_context>\n<ideal_output>Hola. Lamentamos mucho escuchar que está teniendo este inconveniente con el aire acondicionado de la recámara principal; entendemos perfectamente la molestia que esto ocasiona. En este momento, nuestro equipo operativo está validando los detalles y coordinando el reporte de manera manual para resolverlo lo antes posible. Nos mantendremos en contacto continuo con usted para informarle sobre la hora de llegada del técnico.</ideal_output>\n</example_2>\n</few_shot_examples>\n</system_prompt>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1648,
+        656
+      ],
+      "id": "da8091f9-6081-4e0c-bdb2-e15b3d7d26d8",
+      "name": "IA Agent: Redactor V2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "IA Agente: Clasificador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Agente: Clasificador",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "IA Agente: Clasificador",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "ClickUp: Crea una Tarea1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ClickUp: Crea una Tarea",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get many bases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Agent: Redactor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "IA Agent: Redactor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Agent: QA Supervisor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Agente: Clasificador": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Agent: Redactor": {
+      "main": [
+        [
+          {
+            "node": "IA Agent: QA Supervisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: Enviar alerta": {
+      "main": [
+        []
+      ]
+    },
+    "IA Agent: QA Supervisor": {
+      "main": [
+        [
+          {
+            "node": "ClickUp: Crea una Tarea para Colaborador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ClickUp: Crea una Tarea": {
+      "main": [
+        [
+          {
+            "node": "IA Agent: Redactor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many bases": {
+      "main": [
+        [
+          {
+            "node": "IA Agent: Redactor V2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Agent: Redactor V2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "IA Agent: Redactor V2",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Agent: QA Supervisor V2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Agent: QA Supervisor V2": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: Enviar mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ClickUp: Crea una Tarea para Colaborador": {
+      "main": [
+        []
+      ]
+    },
+    "ClickUp: Crea una Tarea1": {
+      "main": [
+        [
+          {
+            "node": "Slack: Enviar alerta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Agent: Redactor V2": {
+      "main": [
+        [
+          {
+            "node": "IA Agent: QA Supervisor V2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "806b6be8-e189-484a-b03b-640ee2ce1cec",
+  "meta": {
+    "instanceId": "11915707a7b101a7347d374b72abeb1bed732cfb87a7f554c8ce298d1fc487b9"
+  },
+  "id": "Mx487Felmuuq1JoO",
+  "tags": []
+}
