@@ -44,7 +44,9 @@ Estructurar el flujo de n8n de forma modular, comentada nodo por nodo y utilizan
 
 💻 PARTE 1: SIMULACIÓN DE REGISTRO DE SALIDA (DATA TRIAJE)
 
-Click aqui para ver tabla
+Tabla:
+https://docs.google.com/spreadsheets/d/1gknFbKTNJOao-qdDHGLGlf-MM_pwsuEW1OAlHeYkb8M/edit?usp=sharing
 
+Flujo:
 
-Click aqui para ver diagrama de flujo
+https://miro.com/app/board/uXjVKar0jtI=/
